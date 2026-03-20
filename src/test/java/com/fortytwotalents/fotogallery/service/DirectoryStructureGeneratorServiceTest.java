@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -21,8 +22,9 @@ void generate_createsEventPortraitsAndKlassenFotoDirectories(@TempDir Path tempD
 List<GalleryEntry> entries = List.of(new GalleryEntry(1, "ABCD-EFGH-IJKL", "MyEvent"),
 new GalleryEntry(2, "MNOP-QRST-UVWX", "MyEvent"));
 CsvReadResult result = new CsvReadResult(entries, "MyEvent");
+Path csvFile = Files.createFile(tempDir.resolve("MyEvent-codes.csv"));
 
-service.generate(result, tempDir);
+service.generate(result, csvFile, tempDir);
 
 assertThat(tempDir.resolve("MyEvent")).isDirectory();
 assertThat(tempDir.resolve("MyEvent/portraits")).isDirectory();
@@ -35,8 +37,9 @@ assertThat(tempDir.resolve("MyEvent/portraits/MNOP-QRST-UVWX")).isDirectory();
 void generate_sanitizesEventNameWithSpecialChars(@TempDir Path tempDir) throws IOException {
 List<GalleryEntry> entries = List.of(new GalleryEntry(1, "ABCD-EFGH-IJKL", "My:Event/2024"));
 CsvReadResult result = new CsvReadResult(entries, "My:Event/2024");
+Path csvFile = Files.createFile(tempDir.resolve("My_Event_2024-codes.csv"));
 
-service.generate(result, tempDir);
+service.generate(result, csvFile, tempDir);
 
 assertThat(tempDir.resolve("My_Event_2024")).isDirectory();
 assertThat(tempDir.resolve("My_Event_2024/portraits")).isDirectory();
@@ -44,11 +47,12 @@ assertThat(tempDir.resolve("My_Event_2024/portraits/ABCD-EFGH-IJKL")).isDirector
 }
 
 @Test
-void generate_throwsWhenEventNameIsBlank(@TempDir Path tempDir) {
+void generate_throwsWhenEventNameIsBlank(@TempDir Path tempDir) throws IOException {
 List<GalleryEntry> entries = List.of(new GalleryEntry(1, "ABCD-EFGH-IJKL", ""));
 CsvReadResult result = new CsvReadResult(entries, "");
+Path csvFile = Files.createFile(tempDir.resolve("event-codes.csv"));
 
-assertThatThrownBy(() -> service.generate(result, tempDir)).isInstanceOf(IllegalArgumentException.class)
+assertThatThrownBy(() -> service.generate(result, csvFile, tempDir)).isInstanceOf(IllegalArgumentException.class)
 .hasMessageContaining("Event name is missing");
 }
 
@@ -57,8 +61,9 @@ void generate_createsNestedDirectoriesWhenBasePathDoesNotExist(@TempDir Path tem
 Path nestedBase = tempDir.resolve("a/b/c");
 List<GalleryEntry> entries = List.of(new GalleryEntry(1, "CODE-1234-ABCD", "TestEvent"));
 CsvReadResult result = new CsvReadResult(entries, "TestEvent");
+Path csvFile = Files.createFile(tempDir.resolve("TestEvent-codes.csv"));
 
-service.generate(result, nestedBase);
+service.generate(result, csvFile, nestedBase);
 
 assertThat(nestedBase.resolve("TestEvent/portraits/CODE-1234-ABCD")).isDirectory();
 }
@@ -66,8 +71,9 @@ assertThat(nestedBase.resolve("TestEvent/portraits/CODE-1234-ABCD")).isDirectory
 @Test
 void generate_handlesEmptyEntryList(@TempDir Path tempDir) throws IOException {
 CsvReadResult result = new CsvReadResult(List.of(), "EmptyEvent");
+Path csvFile = Files.createFile(tempDir.resolve("EmptyEvent-codes.csv"));
 
-service.generate(result, tempDir);
+service.generate(result, csvFile, tempDir);
 
 assertThat(tempDir.resolve("EmptyEvent/portraits")).isDirectory();
 assertThat(tempDir.resolve("EmptyEvent/klassenfoto")).isDirectory();
@@ -77,11 +83,29 @@ assertThat(tempDir.resolve("EmptyEvent/klassenfoto")).isDirectory();
 void generate_isIdempotentWhenRunTwice(@TempDir Path tempDir) throws IOException {
 List<GalleryEntry> entries = List.of(new GalleryEntry(1, "ABCD-EFGH-IJKL", "MyEvent"));
 CsvReadResult result = new CsvReadResult(entries, "MyEvent");
+Path csvFile = tempDir.resolve("MyEvent-codes.csv");
+Files.createFile(csvFile);
 
-service.generate(result, tempDir);
-service.generate(result, tempDir);
+service.generate(result, csvFile, tempDir);
+Files.createFile(csvFile);
+service.generate(result, csvFile, tempDir);
 
 assertThat(tempDir.resolve("MyEvent/portraits/ABCD-EFGH-IJKL")).isDirectory();
+}
+
+@Test
+void generate_movesCsvAndPdfToEventDir(@TempDir Path tempDir) throws IOException {
+List<GalleryEntry> entries = List.of(new GalleryEntry(1, "ABCD-EFGH-IJKL", "MyEvent"));
+CsvReadResult result = new CsvReadResult(entries, "MyEvent");
+Path csvFile = Files.createFile(tempDir.resolve("MyEvent-codes.csv"));
+Path pdfFile = Files.createFile(tempDir.resolve("MyEvent-qr-codes.pdf"));
+
+service.generate(result, csvFile, tempDir);
+
+assertThat(tempDir.resolve("MyEvent/MyEvent-codes.csv")).exists();
+assertThat(tempDir.resolve("MyEvent/MyEvent-qr-codes.pdf")).exists();
+assertThat(csvFile).doesNotExist();
+assertThat(pdfFile).doesNotExist();
 }
 
 }

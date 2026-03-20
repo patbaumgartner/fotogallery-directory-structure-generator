@@ -45,7 +45,7 @@ public class DirectoryStructureRunner implements CommandLineRunner {
 
 		LOGGER.info("Found {} gallery entries for event '{}'", result.entries().size(), result.eventName());
 
-		directoryStructureGeneratorService.generate(result, outputPath);
+		directoryStructureGeneratorService.generate(result, csvInputPath, outputPath);
 	}
 
 }
