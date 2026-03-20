@@ -13,34 +13,40 @@ import java.nio.file.Path;
 @Service
 public class DirectoryStructureGeneratorService {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryStructureGeneratorService.class);
+private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryStructureGeneratorService.class);
 
-	private static final String PORTRAITS_DIR = "portraits";
+private static final String PORTRAITS_DIR = "portraits";
 
-	public void generate(CsvReadResult csvReadResult, Path baseOutputPath) throws IOException {
-		String eventName = csvReadResult.eventName();
+private static final String KLASSENFOTO_DIR = "klassenfoto";
 
-		if (eventName.isBlank()) {
-			throw new IllegalArgumentException("Event name is missing from the CSV file.");
-		}
+public void generate(CsvReadResult csvReadResult, Path baseOutputPath) throws IOException {
+String eventName = csvReadResult.eventName();
 
-		Path eventDir = baseOutputPath.resolve(sanitize(eventName));
-		Path portraitsDir = eventDir.resolve(PORTRAITS_DIR);
+if (eventName.isBlank()) {
+throw new IllegalArgumentException("Event name is missing from the CSV file.");
+}
 
-		Files.createDirectories(portraitsDir);
-		LOGGER.info("Created directory: {}", portraitsDir.toAbsolutePath());
+Path eventDir = baseOutputPath.resolve(sanitize(eventName));
+Path portraitsDir = eventDir.resolve(PORTRAITS_DIR);
+Path klassenFotoDir = eventDir.resolve(KLASSENFOTO_DIR);
 
-		for (GalleryEntry entry : csvReadResult.entries()) {
-			Path idDir = portraitsDir.resolve(entry.code());
-			Files.createDirectories(idDir);
-			LOGGER.info("Created directory: {}", idDir.toAbsolutePath());
-		}
+Files.createDirectories(portraitsDir);
+LOGGER.info("Created directory: {}", portraitsDir.toAbsolutePath());
 
-		LOGGER.info("Directory structure generated under: {}", eventDir.toAbsolutePath());
-	}
+Files.createDirectories(klassenFotoDir);
+LOGGER.info("Created directory: {}", klassenFotoDir.toAbsolutePath());
 
-	private String sanitize(String name) {
-		return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-	}
+for (GalleryEntry entry : csvReadResult.entries()) {
+Path idDir = portraitsDir.resolve(entry.code());
+Files.createDirectories(idDir);
+LOGGER.info("Created directory: {}", idDir.toAbsolutePath());
+}
+
+LOGGER.info("Directory structure generated under: {}", eventDir.toAbsolutePath());
+}
+
+private String sanitize(String name) {
+return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+}
 
 }
